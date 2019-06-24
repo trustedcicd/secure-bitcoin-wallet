@@ -16,10 +16,10 @@ It can encrypt/decrypt a wallet file using an [EP11 crypto server](https://www.i
 The [Electrum frontend](/laravel-electrum), a modified version of [Electrum for Laravel 5.4+](https://github.com/AraneaDev/laravel-electrum),
 runs as a Web frontend to interact with bitcoin users via a Web browser.
 It runs on [Laravel](https://laravel.com/), an emerging application framework written in PHP taking advantage of NodeJS for client-side rendering.
-These two components are dockernized to run in a Docker container on x86 or in an isolated container on a 
+In this monolithic version, these two componets are configured to run in a single Docker container on x86 or in a single Hyper Protect Virtual Server on a 
 LinuexONE Secure Service Container (SSC).
 
-![A blockdiagram](https://github.com/IBM/secure-bitcoin-wallet/blob/images/images/blockdiagram.png)*Block Diagram*
+![A blockdiagram](https://github.com/IBM/secure-bitcoin-wallet/blob/images/images/blockdiagram-monolithic.png)*Block Diagram*
 
 Here is a sample screenshot of the wallet to send bitcoins to a recipient.
 
@@ -29,41 +29,32 @@ Here is a sample screenshot of the wallet to send bitcoins to a recipient.
 
 ### How to build
 
-Build a php:apache docker image if it is not available from an official php repository.
+Just clone a monolithic branch from this repo and build a container out of it.
 
-```
-$ git clone https://github.com/docker-library/php.git
-$ cd php/7.2/stretch/apache
-$ docker build -t php:apache .
-```
-
-Then, build an Elecrum wallet and its frontend by using docker-compose.
+ build an Elecrum wallet and its frontend by using docker-compose.
 
 ```
 $ git clone https://github.com/IBM/secure-bitcoin-wallet.git
-$ cd secure-bitcoin-wallet/laravel-electrum
-$ docker-compose -f docker-compose-build.yml build
+$ git checkout monolithic
+$ git build -t secure-bitcoin-wallet .
 ```
 
 ### How to run
 
-The following sequence of commands starts a pair of containers, electrum-daemon and laravel-electrum. 
-The *wallet* should be a unique wallet name on the host. The *RUNTIME* specifies the container runtime: 
-*runc* for regular Docker containers, or *runq* for isolated containers on SSC. The *ZHSM*
-specifies the hostname of an ep11 server to use ZHSM. If this is not set, the default software AES is used.
+The following sequence of commands starts a monolithic wallet container.
+The *wallet* should be a unique wallet name on the host. 
+The *ZHSM* specifies the hostname of an ep11 server to use ZHSM. If this is not set, the default software AES is used.
 
 ```
-$ WALLET=<wallet-name> (e.g. alice)
+$ WALLET_VOLUME=<wallet-volume-name> (e.g. alice)
 $ PORT=<external-https-port>
-$ RUNTIME=<container-runtme> (e.g. runc for regular Docker containers or runq for isolated containers on SSC)
 $ ZHSM=<ep11server-address> (optional)
-$ docker run -d -v ${WALLET}:/data --runtime ${RUNTIME} -e ZHSM=${ZHSM} --name ${WALLET}-wallet electrum-daemon
-$ docker run -d -v ${WALLET}-db:/data -p ${PORT}:443 -e ELECTRUM_DAEMON_HOST=${WALLET}-wallet  --link ${WALLET}-wallet:${WALLET}-wallet --name ${WALLET}-laravel laravel-electrum
+$ docker run -d -v ${WALLET_VOLUME}:/data -p ${PORT}:443 -e ZHSM=${ZHSM} --name wallet-${WALLET} secure-bitcoin-wallet
 ```
 
 Use a Web browser to access the electrum wallet.
 
-- Access https://hostname:port/electrum from a browser with the port number specified for the laravel-electrum container.
+- Access https://hostname:port/electrum from a browser with the port number specified for the container.
 - Accept a warning on a browser to use a self-signed certificate.
 - Click "register" to register name, e-mail address, and password, for the first time. Or click "login" if already registered.
 - Access https://hostname:port/electrum again if not redirected automatically.
@@ -75,16 +66,16 @@ Use a Web browser to access the electrum wallet.
 
 1. Persistent data
 
-Wallet fils are stored in a Docker volume, which can be examined by the following command.
+Wallet files are stored in a Docker volume, which can be examined by the following command.
 
 ```
 $ docker volume inspect ${WALLET}
 ```
 
-User registration information is also stored in another Docker volume, as shown below.
+To load a previously created wallet with a password, run the following command.
 
 ```
-$ docker volume inspect ${WALLET}-db
+$ docker run -d -v ${WALLET_VOLUME}:/data -e "/data/electrum/testnet/wallets/default_wallet" -e PASSWORD={wallet-password} -p ${PORT}:443 -e ZHSM=${ZHSM} --name wallet-${WALLET} secure-bitcoin-wallet
 ```
 
 2. How to run electrum in an (insecure) GUI mode
