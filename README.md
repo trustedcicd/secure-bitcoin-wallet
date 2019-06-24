@@ -2,9 +2,6 @@
 
 This branch creates a monolithic container to package a Web Frontend and an Electrum Bitcoin Client in a single container, using [Electrum 3.3.6](https://github.com/spesmilo/electrum/tree/3.3.6).
 
-This README is under construction. The procedure to build and run containers is obsolete.
-
-
 ## Electrum Bitcoin Client with Web Frontend
 
 Secure Bitcoin Wallet is a Dockernized version of [Electrum Bitcoin Client](/electrum) 
