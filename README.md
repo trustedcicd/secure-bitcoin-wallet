@@ -2,9 +2,6 @@
 
 This branch creates a monolithic container to package a Web Frontend and an Electrum Bitcoin Client in a single container, using [Electrum 3.3.6](https://github.com/spesmilo/electrum/tree/3.3.6).
 
-This README is under construction. The procedure to build and run containers is obsolete.
-
-
 ## Electrum Bitcoin Client with Web Frontend
 
 Secure Bitcoin Wallet is a Dockernized version of [Electrum Bitcoin Client](/electrum) 
@@ -12,7 +9,7 @@ with a [Web frontend](/laravel-electrum) to run on [IBM LinuxONE](https://develo
 as shown in the following block diagram.
 The [Electrum Bitcoin Client](/electrum), a modified version of [Electrum](https://github.com/spesmilo/electrum), runs as a JSON RPC server to maintain 
 a bitcoin wallet by interacting with the bitcoin network.
-It can encrypt/decrypt a wallet file using an [EP11 crypto server](https://www.ibm.com/support/knowledgecenter/en/linuxonibm/com.ibm.linux.z.lxce/lxce_stack.html) (zHSM) to protect the encryption key. 
+It can optionally encrypt/decrypt a wallet file using an [EP11 crypto server](https://www.ibm.com/support/knowledgecenter/en/linuxonibm/com.ibm.linux.z.lxce/lxce_stack.html) (zHSM) to protect the encryption key. 
 The [Electrum frontend](/laravel-electrum), a modified version of [Electrum for Laravel 5.4+](https://github.com/AraneaDev/laravel-electrum),
 runs as a Web frontend to interact with bitcoin users via a Web browser.
 It runs on [Laravel](https://laravel.com/), an emerging application framework written in PHP taking advantage of NodeJS for client-side rendering.
@@ -27,29 +24,27 @@ Here is a sample screenshot of the wallet to send bitcoins to a recipient.
 
 ## WARNING: This software is for demonstration purposes only. Use at your own risk.
 
-### How to build
+### How to build on a regular Linux or Mac
 
 Just clone a monolithic branch from this repo and build a container out of it.
-
- build an Elecrum wallet and its frontend by using docker-compose.
 
 ```
 $ git clone https://github.com/IBM/secure-bitcoin-wallet.git
 $ git checkout monolithic
-$ git build -t secure-bitcoin-wallet .
+$ docker build -t secure-bitcoin-wallet .
 ```
 
-### How to run
+### How to run on a regular Linux or Mac
 
 The following sequence of commands starts a monolithic wallet container.
-The *wallet* should be a unique wallet name on the host. 
-The *ZHSM* specifies the hostname of an ep11 server to use ZHSM. If this is not set, the default software AES is used.
+The *WALLET_VOLUME* and *PORT* should be a unique wallet volume name and port number, respectively, on the host. 
+The *ZHSM* specifies the hostname of an ep11 server to use ZHSM. If this is not set, a default software AES is used.
 
 ```
 $ WALLET_VOLUME=<wallet-volume-name> (e.g. alice)
 $ PORT=<external-https-port>
 $ ZHSM=<ep11server-address> (optional)
-$ docker run -d -v ${WALLET_VOLUME}:/data -p ${PORT}:443 -e ZHSM=${ZHSM} --name wallet-${WALLET} secure-bitcoin-wallet
+$ docker run -d -v ${WALLET_VOLUME}:/data -p ${PORT}:443 -e ZHSM=${ZHSM} --name wallet-${WALLET_VOLUME} secure-bitcoin-wallet
 ```
 
 Use a Web browser to access the electrum wallet.
@@ -69,20 +64,15 @@ Use a Web browser to access the electrum wallet.
 Wallet files are stored in a Docker volume, which can be examined by the following command.
 
 ```
-$ docker volume inspect ${WALLET}
+$ docker volume inspect ${WALLET_VOLUME}
 ```
 
-To load a previously created wallet with a password, run the following command.
+2. Reloading an existing wallet
+
+To load a previously created wallet with a password in a docker volume, run the following command to create a wallet container
 
 ```
-$ docker run -d -v ${WALLET_VOLUME}:/data -e "/data/electrum/testnet/wallets/default_wallet" -e PASSWORD={wallet-password} -p ${PORT}:443 -e ZHSM=${ZHSM} --name wallet-${WALLET} secure-bitcoin-wallet
-```
-
-2. How to run electrum in an (insecure) GUI mode
-
-```
-$ xhost +
-$ docker run -d -e DISPLAY=${DISPLAY} -v ${HOME}/.Xauthority:/root/.Xauthority:rw -v ${WALLET}:/data -e ELECTRUM_MODE=GUI electrum-daemon
+$ docker run -d -v ${WALLET_VOLUME}:/data -e WALLET=/data/electrum/testnet/wallets/default_wallet -e PASSWORD={wallet-password} -p ${PORT}:443 -e ZHSM=${ZHSM} --name wallet-${WALLET_VOLUME} secure-bitcoin-wallet
 ```
 
 ## License
